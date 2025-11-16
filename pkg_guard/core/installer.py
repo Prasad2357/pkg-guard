@@ -2,7 +2,7 @@ import sys
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from pkg_guard.core.pypi_utils import pypi_exists, load_popular, suggest_names
+from pkg_guard.core.pypi_utils import pypi_exists, load_popular, suggest_names, search_pypi, auto_refresh_popular
 from pkg_guard.ui.console import console, spinner
 from pkg_guard.ui.prompts import choose_package
 from InquirerPy import inquirer
@@ -34,6 +34,7 @@ def safe_install(package: str):
 
 def handle_install_command(packages: list[str], yes: bool):
     """Main logic for install command."""
+    auto_refresh_popular()  # ← refresh if file is stale
     with spinner("Checking PyPI for packages..."):
         results = check_packages_concurrently(packages)
 
@@ -73,6 +74,13 @@ def handle_install_command(packages: list[str], yes: bool):
             population = load_popular(POPULAR_PATH)
 
         suggestions = suggest_names(pkg, population, limit=6)
+
+        # If no suggestions or weak matches, try online search
+        if not suggestions or suggestions[0][1] < 70:
+            console.print("[dim]No strong local matches found — searching PyPI online...[/dim]")
+            online_suggestions = search_pypi(pkg, limit=6)
+            if online_suggestions:
+                suggestions = [(name, 90, 0) for name in online_suggestions]
 
         if yes and suggestions:
             best = suggestions[0][0]

@@ -1,0 +1,31 @@
+name: Update popular packages
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"  # every 1st day of the month at midnight UTC
+  workflow_dispatch:      # allow manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests rich
+
+      - name: Update popular packages list
+        run: python -m pkg_guard.cli update-popular
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "pkg-guard-bot"
+          git config user.email "bot@pkg-guard"
+          git add pkg_guard/popular_packages.txt
+          git commit -m "🔄 Auto-update popular_packages.txt (monthly refresh)" || echo "No changes"
+          git push

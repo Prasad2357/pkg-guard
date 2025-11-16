@@ -69,3 +69,5 @@ pip-wheel-metadata/
 # Twine metadata
 *.egg-info/
 pkg_guard.egg-info/
+
+pkg_guard/popular_packages.meta.json

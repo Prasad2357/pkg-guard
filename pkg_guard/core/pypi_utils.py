@@ -7,6 +7,42 @@ from rapidfuzz import process, fuzz
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
 CACHE_PATH = Path.home() / ".pkg_guard_cache.json"
 
+POPULAR_PATH = Path(__file__).parent.parent / "popular_packages.txt"
+TOP_PYPI_URL = "https://hugovk.github.io/top-pypi-packages/top-pypi-packages-30-days.json"
+META_PATH = POPULAR_PATH.with_suffix(".meta.json")
+
+def auto_refresh_popular(limit: int = 200, days: int = 30):
+    """Refresh local popular_packages.txt if older than `days`."""
+    try:
+        # Check last refresh timestamp
+        if META_PATH.exists():
+            meta = json.loads(META_PATH.read_text(encoding="utf-8"))
+            last_update = meta.get("last_update", 0)
+            if time.time() - last_update < days * 86400:
+                return  # not old enough yet
+
+        resp = requests.get(TOP_PYPI_URL, timeout=8)
+        if resp.status_code == 200:
+            data = resp.json()
+            top = [row["project"] for row in data["rows"][:limit]]
+            POPULAR_PATH.write_text("\n".join(top), encoding="utf-8")
+            META_PATH.write_text(json.dumps({"last_update": time.time()}))
+            print(f"✅ Auto-refreshed popular_packages.txt with {len(top)} packages.")
+    except Exception:
+        pass  # silently skip if offline
+
+def search_pypi(query: str, limit: int = 10) -> list[str]:
+    """Search PyPI for packages matching the query."""
+    try:
+        url = f"https://pypi.org/search/?q={query}&format=json"
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return [r["name"] for r in data.get("projects", [])][:limit]
+    except Exception:
+        pass
+    return []
+
 def _load_cache():
     if CACHE_PATH.exists():
         try:

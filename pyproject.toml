@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pkg-guard"
-version = "0.1.2"
+version = "0.1.3"
 description = "Safe, typo-aware package installer for Python."
 authors = [{ name = "Prasad" }]
 readme = "README.md"
